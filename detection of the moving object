@@ -1,0 +1,41 @@
+max_object = 10
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        break
+    fgmask = fgbg.apply(frame)
+    contours, _ = cv2.findContours(fgmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    for contour in contours:
+        if cv2.contourArea(contour) < 500:
+            continue
+        x, y, w, h = cv2.boundingRect(contour)
+        roi = frame[y:y+h, x:x+w]
+        blob = cv2.dnn.blobFromImage(roi, 0.007843, (300, 300), 127.5)
+        net.setInput(blob)
+        detections = net.forward()
+        for i in range(detections.shape[2]):
+            confidence = detections[0, 0, i, 2]
+            if confidence > 0.5:
+                idx = int(detection[0,0,i,1])
+                label = classes[idx]
+                label_text = f"{label}:{confidence:.2f}"
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                cv2.putText(frame, label_text,(x,y-10),cv2.FONT_HERSHEY_SIMPLEX,0.5,(0,255,0),2)
+                print(f"Detected object: {label} with confidence {confidence:.2f}")
+                object_count +=1
+                if object_count >= max_objects:
+                    print("Detected 10 objects, stopping execution...")
+                    break
+        if object_count >= max_object:
+            break
+        cv2.imshow('Frame', frame)
+        cv2.imshow('Foreground Mask', fgmask)
+        if cv2.waitKey(30) & 0xFF == ord('q'):
+            break
+cap.release()
+if cv2.getWindowProperty('Frame', cv2.WND_PROP_VISIBLE) >= 1:
+    cv2.destroyAllWindows()
+
+print("Program execution stopped.")
+                    
+                    
